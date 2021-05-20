@@ -10,11 +10,18 @@ type Item struct {
 }
 
 func TestPipeLine(t *testing.T) {
-	err := PipeLine(inlet, outlet, section1, section2)
+	foo := Foo{2, true}
+	err := PipeLine(foo, inlet, outlet, section1, section2)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
 }
+
+type Foo struct {
+	x int
+	y bool
+}
+
 func TestPipeLineError(t *testing.T) {
 	var streamingInlet Inlet = func(chout PipeChan, c *Cancellation) {
 		defer close(chout)
@@ -29,7 +36,8 @@ func TestPipeLineError(t *testing.T) {
 		c.Cancel(fmt.Errorf("I bailed."))
 		close(chout)
 	}
-	err := PipeLine(streamingInlet, outlet, section1, badSection, section2)
+	foo := Foo{2, true}
+	err := PipeLine(foo, streamingInlet, outlet, section1, badSection, section2)
 	if err == nil {
 		t.Error("Expected failure but the error was nil")
 	}
@@ -51,12 +59,13 @@ var inlet Inlet = func(outchan PipeChan, c *Cancellation) {
 }
 var section1 Section = func(inchan, outchan PipeChan, c *Cancellation) {
 	defer close(outchan)
+	ctx := c.Context()
 	for item := range inchan {
 		if c.Cancelled() {
 			return
 		}
 		it := item.(Item)
-		it.s += " stage1"
+		it.s += " stage1" + fmt.Sprintf("%v", ctx.(Foo))
 		outchan <- it
 		outchan <- it
 

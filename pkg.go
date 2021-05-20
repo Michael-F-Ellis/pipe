@@ -11,21 +11,31 @@ type Outlet func(chin PipeChan, done chan (struct{}), c *Cancellation)
 type Cancellation struct {
 	cancelled bool
 	err       error
+	ctx       interface{}
 }
 type PipeChan chan (interface{})
 
+// Cancel sets the cancellation flag so that calls to Cancelled() will return true. The
+// error value is stored for return by PipeLine()
 func (c *Cancellation) Cancel(err error) {
 	c.cancelled = true
 	c.err = err
 }
 
+// Cancelled() returns true if any pipeline section has called Cancel()
 func (c *Cancellation) Cancelled() bool {
 	return c.cancelled
 }
 
+// Context returns whatever value was stored in the Cancellation struct when
+// the pipe line was started.
+func (c *Cancellation) Context() interface{} {
+	return c.ctx
+}
+
 // PipeLine runs a pipeline.
-func PipeLine(inlet Inlet, outlet Outlet, sections ...Section) (err error) {
-	var c Cancellation
+func PipeLine(ctx interface{}, inlet Inlet, outlet Outlet, sections ...Section) (err error) {
+	var c = Cancellation{ctx: ctx}
 	// Provide the inlet function with an output channel
 	var chout = make(chan (interface{}), 1)
 	// Launch it.
